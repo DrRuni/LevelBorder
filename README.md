@@ -16,16 +16,12 @@ This makes progression, exploration and survival directly connected to player XP
 
 - Global WorldBorder shared across Overworld, Nether and End
 - Dynamic level-based border expansion
-- Smooth border growth on level progress
 - Multiplayer-ready challenge system
 - Separate challenge timer
 - Toggleable scoreboard system
 - Persistent data storage across server restarts
-- Admin controls for starting, stopping and resetting the challenge
+- Admin controls for starting, stopping, resuming and resetting the challenge
 - Configurable border center
-- OP-only options GUI
-- KeepInventory toggle through the options GUI
-- Border size control through the options GUI
 - 1:1 Nether border handling
 - Custom mob spawning system for small WorldBorder challenges
 - Border-aware monster spawning outside the current challenge border
@@ -43,8 +39,8 @@ This makes progression, exploration and survival directly connected to player XP
 
 ## ⚙️ Compatibility
 
-- Requires **Paper 26.2-alpha**
-- Tested with **Paper 26.2-alpha**
+- Requires **Paper 26.1.2**
+- Tested with **Paper 26.1.2**
 - Requires **Java 25**
 - Paper-based servers only
 - Not compatible with pure Spigot/Bukkit
@@ -53,18 +49,6 @@ This makes progression, exploration and survival directly connected to player XP
 ---
 
 ## ⌨️ Commands
-
-### Admin / OP commands
-
-```text
-/optionen
-/levelborder optionen
-/levelborder start
-/levelborder stop
-/levelborder set <size>
-/levelborder reset
-/levelborder center
-```
 
 ### Player commands
 
@@ -76,9 +60,19 @@ This makes progression, exploration and survival directly connected to player XP
 ### General commands
 
 ```text
-/levelborder
 /levelborder info
 /levelborder score
+```
+
+### Admin / OP commands
+
+```text
+/levelborder start
+/levelborder stop
+/levelborder resume
+/levelborder set
+/levelborder reset
+/levelborder center
 ```
 
 ---
@@ -94,7 +88,7 @@ This makes progression, exploration and survival directly connected to player XP
 
 ## ⚠️ Disclaimer
 
-This is an unofficial fan project inspired by the Level = Border challenge known from BastiGHG.
+This is an unofficial fan project inspired by the **Level = Border** challenge known from BastiGHG.
 
 LevelBorder Challenge was developed independently and is not affiliated with, endorsed by, partnered with or officially connected to BastiGHG.
 

@@ -14,10 +14,7 @@ public class PortalManager {
     private final JavaPlugin plugin;
     private final BorderDataManager data;
     private final File portalDir;
-    private final Map<World, List<PortalEntry>> portalCache = new HashMap<>();
-
-    private static final int PORTAL_SEARCH_HORIZONTAL_RADIUS = 4;
-    private static final int PORTAL_SEARCH_VERTICAL_RADIUS = 3;
+    private final Map<World, List<Location>> portalCache = new HashMap<>();
 
     public PortalManager(JavaPlugin plugin, BorderDataManager data) {
         this.plugin = plugin;
@@ -29,33 +26,6 @@ public class PortalManager {
         }
     }
 
-    private record PortalShape(
-            World world,
-            int minX,
-            int minY,
-            int minZ,
-            int maxX,
-            int maxY,
-            int maxZ
-    ) {
-
-        private String key() {
-            return minX + "_" + minY + "_" + minZ + "__" + maxX + "_" + maxY + "_" + maxZ;
-        }
-
-        private Location center() {
-            return new Location(
-                    world,
-                    (minX + maxX) / 2.0 + 0.5,
-                    (minY + maxY) / 2.0,
-                    (minZ + maxZ) / 2.0 + 0.5
-            );
-        }
-    }
-
-    private record PortalEntry(String key, Location center) {
-    }
-
     public void loadAllPortals() {
         for (World world : Bukkit.getWorlds()) {
             loadWorldPortals(world);
@@ -65,23 +35,19 @@ public class PortalManager {
     private void loadWorldPortals(World world) {
 
         File file = new File(portalDir, world.getName() + ".yml");
-        List<PortalEntry> list = new ArrayList<>();
+        List<Location> list = new ArrayList<>();
 
         if (file.exists()) {
             YamlConfiguration cfg = YamlConfiguration.loadConfiguration(file);
-
             for (String key : cfg.getKeys(false)) {
-                Location center = new Location(
+                list.add(new Location(
                         world,
                         cfg.getDouble(key + ".x"),
                         cfg.getDouble(key + ".y"),
                         cfg.getDouble(key + ".z")
-                );
-
-                list.add(new PortalEntry(key, center));
+                ));
             }
         }
-
         portalCache.put(world, list);
     }
 
@@ -90,15 +56,13 @@ public class PortalManager {
         World w = target.getWorld();
         if (w == null) return null;
 
-        List<PortalEntry> portals = portalCache.get(w);
+        List<Location> portals = portalCache.get(w);
         if (portals == null || portals.isEmpty()) return null;
 
         Location best = null;
         double bestDist = Double.MAX_VALUE;
 
-        for (PortalEntry entry : portals) {
-            Location l = entry.center();
-
+        for (Location l : portals) {
             double d = l.distanceSquared(target);
             if (d < bestDist) {
                 bestDist = d;
@@ -108,41 +72,38 @@ public class PortalManager {
         return best != null ? best.clone() : null;
     }
 
-    public void registerPortal(Location location) {
+    public void registerPortal(Location center) {
 
-        if (location == null || location.getWorld() == null) return;
+        if (center == null || center.getWorld() == null) return;
 
-        PortalShape shape = findPortalShape(location);
-        if (shape == null) return;
+        center = new Location(
+                center.getWorld(),
+                center.getBlockX() + 0.5,
+                center.getBlockY(),
+                center.getBlockZ() + 0.5
+        );
 
-        Location center = shape.center();
         World w = center.getWorld();
-        if (w == null) return;
+        List<Location> list = portalCache.computeIfAbsent(w, _ -> new ArrayList<>());
 
-        List<PortalEntry> list = portalCache.computeIfAbsent(w, _ -> new ArrayList<>());
-
-        String key = shape.key();
-
-        for (PortalEntry existing : list) {
-            if (existing.key().equals(key)) {
-                return;
-            }
-
-            if (existing.center().distanceSquared(center) <= 1.0) {
+        for (Location l : list) {
+            if (
+                    l.getBlockX() == center.getBlockX() &&
+                            l.getBlockY() == center.getBlockY() &&
+                            l.getBlockZ() == center.getBlockZ()
+            ) {
                 return;
             }
         }
+
+        list.add(center.clone());
 
         File file = new File(portalDir, w.getName() + ".yml");
         YamlConfiguration cfg = file.exists()
                 ? YamlConfiguration.loadConfiguration(file)
                 : new YamlConfiguration();
 
-        if (cfg.contains(key)) {
-            return;
-        }
-
-        list.add(new PortalEntry(key, center.clone()));
+        String key = center.getBlockX() + "_" + center.getBlockY() + "_" + center.getBlockZ();
 
         cfg.set(key + ".x", center.getX());
         cfg.set(key + ".y", center.getY());
@@ -158,96 +119,19 @@ public class PortalManager {
 
     public Location findPortalCenter(Location start) {
 
-        PortalShape shape = findPortalShape(start);
-        if (shape == null) return null;
-
-        return shape.center();
-    }
-
-    private PortalShape findPortalShape(Location start) {
-
-        if (start == null || start.getWorld() == null) return null;
-
-        World w = start.getWorld();
-
-        Block seed = findNearestPortalBlock(start);
-        if (seed == null) return null;
-
-        int sx = seed.getX();
-        int sy = seed.getY();
-        int sz = seed.getZ();
-
-        boolean xAxis = isPortalBlock(w, sx + 1, sy, sz)
-                || isPortalBlock(w, sx - 1, sy, sz);
-
-        boolean zAxis = isPortalBlock(w, sx, sy, sz + 1)
-                || isPortalBlock(w, sx, sy, sz - 1);
-
-        if (!xAxis && !zAxis) {
-            xAxis = true;
-        }
-
-        Set<String> visited = new HashSet<>();
-        ArrayDeque<Block> queue = new ArrayDeque<>();
-        queue.add(seed);
-
-        int minX = sx;
-        int maxX = sx;
-        int minY = sy;
-        int maxY = sy;
-        int minZ = sz;
-        int maxZ = sz;
-
-        while (!queue.isEmpty()) {
-
-            Block current = queue.poll();
-
-            String key = current.getX() + ":" + current.getY() + ":" + current.getZ();
-            if (!visited.add(key)) continue;
-
-            if (current.getType() != Material.NETHER_PORTAL) continue;
-
-            int x = current.getX();
-            int y = current.getY();
-            int z = current.getZ();
-
-            minX = Math.min(minX, x);
-            maxX = Math.max(maxX, x);
-            minY = Math.min(minY, y);
-            maxY = Math.max(maxY, y);
-            minZ = Math.min(minZ, z);
-            maxZ = Math.max(maxZ, z);
-
-            queue.add(w.getBlockAt(x, y + 1, z));
-            queue.add(w.getBlockAt(x, y - 1, z));
-
-            if (xAxis) {
-                queue.add(w.getBlockAt(x + 1, y, z));
-                queue.add(w.getBlockAt(x - 1, y, z));
-            } else {
-                queue.add(w.getBlockAt(x, y, z + 1));
-                queue.add(w.getBlockAt(x, y, z - 1));
-            }
-        }
-
-        return new PortalShape(w, minX, minY, minZ, maxX, maxY, maxZ);
-    }
-
-    private Block findNearestPortalBlock(Location start) {
-
         World w = start.getWorld();
         if (w == null) return null;
 
         int bx = start.getBlockX();
-        int by = start.getBlockY();
         int bz = start.getBlockZ();
 
-        Block best = null;
-        double bestDist = Double.MAX_VALUE;
+        for (int y = start.getBlockY() - 2; y <= start.getBlockY() + 2; y++) {
 
-        for (int y = by - PORTAL_SEARCH_VERTICAL_RADIUS; y <= by + PORTAL_SEARCH_VERTICAL_RADIUS; y++) {
-            for (int dx = -PORTAL_SEARCH_HORIZONTAL_RADIUS; dx <= PORTAL_SEARCH_HORIZONTAL_RADIUS; dx++) {
-                for (int dz = -PORTAL_SEARCH_HORIZONTAL_RADIUS; dz <= PORTAL_SEARCH_HORIZONTAL_RADIUS; dz++) {
+            int minX = bx, maxX = bx, minZ = bz, maxZ = bz;
+            boolean found = false;
+
+            for (int dx = -4; dx <= 4; dx++) {
+                for (int dz = -4; dz <= 4; dz++) {
 
                     int x = bx + dx;
                     int z = bz + dz;
@@ -255,25 +139,26 @@ public class PortalManager {
                     if (!w.isChunkLoaded(x >> 4, z >> 4)) continue;
 
                     Block b = w.getBlockAt(x, y, z);
-                    if (b.getType() != Material.NETHER_PORTAL) continue;
-
-                    double dist = b.getLocation().distanceSquared(start);
-                    if (dist < bestDist) {
-                        bestDist = dist;
-                        best = b;
+                    if (b.getType() == Material.NETHER_PORTAL) {
+                        found = true;
+                        minX = Math.min(minX, x);
+                        maxX = Math.max(maxX, x);
+                        minZ = Math.min(minZ, z);
+                        maxZ = Math.max(maxZ, z);
                     }
                 }
             }
+
+            if (found) {
+                return new Location(
+                        w,
+                        (minX + maxX) / 2.0 + 0.5,
+                        y,
+                        (minZ + maxZ) / 2.0 + 0.5
+                );
+            }
         }
-
-        return best;
-    }
-
-    private boolean isPortalBlock(World w, int x, int y, int z) {
-
-        if (!w.isChunkLoaded(x >> 4, z >> 4)) return false;
-
-        return w.getBlockAt(x, y, z).getType() == Material.NETHER_PORTAL;
+        return null;
     }
 
     public Location createOverworldPortal(World overworld, Location fromNether) {
@@ -289,11 +174,7 @@ public class PortalManager {
         clearArea(overworld, x, y, z);
         buildPortal(overworld, x, y, z);
 
-        Location center = findPortalCenter(new Location(overworld, x + 0.5, y + 1, z + 0.5));
-        if (center == null) {
-            center = new Location(overworld, x + 0.5, y + 1, z + 0.5);
-        }
-
+        Location center = new Location(overworld, x + 0.5, y + 1, z + 0.5);
         registerPortal(center);
         return center;
     }
@@ -311,11 +192,7 @@ public class PortalManager {
         clearArea(nether, x, y, z);
         buildPortal(nether, x, y, z);
 
-        Location center = findPortalCenter(new Location(nether, x + 0.5, y + 1, z + 0.5));
-        if (center == null) {
-            center = new Location(nether, x + 0.5, y + 1, z + 0.5);
-        }
-
+        Location center = new Location(nether, x + 0.5, y + 1, z + 0.5);
         registerPortal(center);
         return center;
     }
@@ -337,15 +214,15 @@ public class PortalManager {
         World w = loc.getWorld();
         if (w == null) return;
 
-        List<PortalEntry> list = portalCache.get(w);
+        List<Location> list = portalCache.get(w);
         if (list == null || list.isEmpty()) return;
 
-        PortalEntry remove = null;
+        Location remove = null;
         double max = radius * radius;
 
-        for (PortalEntry entry : list) {
-            if (entry.center().distanceSquared(loc) <= max) {
-                remove = entry;
+        for (Location l : list) {
+            if (l.distanceSquared(loc) <= max) {
+                remove = l;
                 break;
             }
         }
@@ -455,12 +332,10 @@ public class PortalManager {
         File file = new File(portalDir, world.getName() + ".yml");
         YamlConfiguration cfg = new YamlConfiguration();
 
-        List<PortalEntry> list = portalCache.get(world);
+        List<Location> list = portalCache.get(world);
         if (list != null) {
-            for (PortalEntry entry : list) {
-                Location l = entry.center();
-                String key = entry.key();
-
+            for (Location l : list) {
+                String key = l.getBlockX() + "_" + l.getBlockY() + "_" + l.getBlockZ();
                 cfg.set(key + ".x", l.getX());
                 cfg.set(key + ".y", l.getY());
                 cfg.set(key + ".z", l.getZ());

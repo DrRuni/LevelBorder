@@ -10,11 +10,8 @@ import runi.myddns.levelborder.Commands.LevelBorderCommand;
 import runi.myddns.levelborder.Commands.ScoreboardCommand;
 import runi.myddns.levelborder.Listeners.PortalListener;
 import runi.myddns.levelborder.Listeners.PlayerListener;
-import runi.myddns.levelborder.Listeners.WorldOptionsListener;
 import runi.myddns.levelborder.Manager.*;
 import runi.myddns.levelborder.Utils.ConsoleColor;
-import runi.myddns.levelborder.Commands.OptionsCommand;
-import runi.myddns.levelborder.GUI.OptionsGUI;
 
 public class LevelBorderMain extends JavaPlugin {
 
@@ -38,6 +35,8 @@ public class LevelBorderMain extends JavaPlugin {
         Bukkit.getConsoleSender().sendMessage("");
     }
 
+
+
     @Override
     public void onEnable() {
         instance = this;
@@ -55,24 +54,20 @@ public class LevelBorderMain extends JavaPlugin {
         TimerManager timerManager = new TimerManager(this, dataManager);
         LevelBorderManager borderManager = new LevelBorderManager(this, dataManager);
 
-        applyKeepInventoryToAllWorlds(dataManager.isKeepInventoryEnabled());
-
-        OptionsGUI optionsGUI = new OptionsGUI(borderManager, scoreboardManager, timerManager);
-
         portalManager = new PortalManager(this, dataManager);
         mobSpawnManager = new MobSpawnManager(this, dataManager, borderManager);
         portalManager.loadAllPortals();
 
-        Bukkit.getPluginManager().registerEvents(new PortalListener(this, portalManager, dataManager), this);
-        getServer().getPluginManager().registerEvents(new PlayerListener(this, borderManager, scoreboardManager), this);
-        getServer().getPluginManager().registerEvents(optionsGUI, this);getServer().getPluginManager().registerEvents(new WorldOptionsListener(dataManager), this);
-
-        LevelBorderCommand command = new LevelBorderCommand(
-                borderManager,
-                scoreboardManager,
-                timerManager,
-                optionsGUI
+        Bukkit.getPluginManager().registerEvents(
+                new PortalListener(this, portalManager, dataManager),
+                this
         );
+        getServer().getPluginManager().registerEvents(
+                new PlayerListener(this, borderManager, scoreboardManager),
+                this
+        );
+
+        LevelBorderCommand command = new LevelBorderCommand(borderManager, scoreboardManager, timerManager);
         PluginCommand levelBorderCommand = getCommand("levelborder");
 
         if (levelBorderCommand != null) {
@@ -90,16 +85,6 @@ public class LevelBorderMain extends JavaPlugin {
             lbScoreCommand.setTabCompleter(scoreCmd);
         } else {
             getLogger().severe("❌ Command 'lbscore' fehlt in der plugin.yml!");
-        }
-
-        OptionsCommand optionsCommand = new OptionsCommand(optionsGUI);
-        PluginCommand optionenCommand = getCommand("optionen");
-
-        if (optionenCommand != null) {
-            optionenCommand.setExecutor(optionsCommand);
-            optionenCommand.setTabCompleter(optionsCommand);
-        } else {
-            getLogger().severe("❌ Command 'optionen' fehlt in der plugin.yml!");
         }
 
         scoreboardManager.startUpdater();
@@ -124,11 +109,7 @@ public class LevelBorderMain extends JavaPlugin {
         getLogger().info(ConsoleColor.GOLD + "💾 LevelBorder beendet." + ConsoleColor.RESET);
     }
 
-    private void applyKeepInventoryToAllWorlds(boolean enabled) {
-        for (org.bukkit.World world : Bukkit.getWorlds()) {
-            world.setGameRule(org.bukkit.GameRules.KEEP_INVENTORY, enabled);
-        }
-    }
+
 
     private void saveBorderDataFile() {
         File file = new File(getDataFolder(), "BorderData.yml");

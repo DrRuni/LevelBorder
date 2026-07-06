@@ -118,15 +118,6 @@ public class BorderDataManager {
         save();
     }
 
-    public boolean isKeepInventoryEnabled() {
-        return dataCfg.getBoolean("options.keep-inventory", false);
-    }
-
-    public void setKeepInventoryEnabled(boolean enabled) {
-        dataCfg.set("options.keep-inventory", enabled);
-        save();
-    }
-
     public long getTimerSeconds() {
         return dataCfg.getLong("timer.seconds", 0);
     }
@@ -157,20 +148,19 @@ public class BorderDataManager {
         return total;
     }
 
-    public void resetToDefaults() {
 
-        dataCfg.set("border.world", "world");
-        dataCfg.set("border.center.x", 0);
-        dataCfg.set("border.center.y", 0);
-        dataCfg.set("border.center.z", 0);
-        dataCfg.set("border.size", 3);
-        dataCfg.set("border.active", false);
+    public void resetAllPlayerLevels() {
+
+        for (Player p : Bukkit.getOnlinePlayers()) {
+            p.setLevel(0);
+        }
+
+        if (dataCfg.isConfigurationSection("players")) {
+            dataCfg.set("players", null);
+        }
+
         dataCfg.set("border.max-total-level", 0);
-
-        dataCfg.set("scoreboard.visible", false);
-        dataCfg.set("timer.seconds", 0);
-
-        dataCfg.set("players", null);
+        dataCfg.set("border.size", 1.0);
 
         save();
     }

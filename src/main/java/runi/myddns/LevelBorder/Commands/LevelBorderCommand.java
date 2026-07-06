@@ -12,13 +12,11 @@ import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
 import org.jspecify.annotations.NonNull;
-
 import runi.myddns.levelborder.LevelBorderMain;
 import runi.myddns.levelborder.Manager.BorderDataManager;
 import runi.myddns.levelborder.Manager.LevelBorderManager;
 import runi.myddns.levelborder.Manager.ScoreboardManager;
 import runi.myddns.levelborder.Manager.TimerManager;
-import runi.myddns.levelborder.GUI.OptionsGUI;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -30,16 +28,13 @@ public class LevelBorderCommand implements CommandExecutor, TabCompleter {
     private final LevelBorderManager borderManager;
     private final ScoreboardManager scoreboardManager;
     private final TimerManager timerManager;
-    private final OptionsGUI optionsGUI;
 
     public LevelBorderCommand(LevelBorderManager borderManager,
                               ScoreboardManager scoreboardManager,
-                              TimerManager timerManager,
-                              OptionsGUI optionsGUI) {
+                              TimerManager timerManager) {
         this.borderManager = borderManager;
         this.scoreboardManager = scoreboardManager;
         this.timerManager = timerManager;
-        this.optionsGUI = optionsGUI;
     }
 
     @Override
@@ -75,11 +70,6 @@ public class LevelBorderCommand implements CommandExecutor, TabCompleter {
 
             case "info" -> sendDetailedInfo(player, data);
 
-            case "optionen", "options" -> {
-                optionsGUI.open(player);
-                success(player, "⚙ Optionen geöffnet.");
-            }
-
             case "center" -> {
                 if (!isAdmin) {
                     error(player, "❌ Nur der Admin darf die Border-Mitte setzen!");
@@ -108,72 +98,52 @@ public class LevelBorderCommand implements CommandExecutor, TabCompleter {
                     return true;
                 }
 
-                Location startLocation = player.getLocation().clone();
+                if (borderManager.getData().getCenter() == null) {
+                    borderManager.setCenter(player.getLocation());
+                }
+
+                borderManager.setActive(true);
+
+                for (Player online : Bukkit.getOnlinePlayers()) {
+                    borderManager.getData().savePlayerLevel(online);
+                }
+
+                scoreboardManager.show();
 
                 for (Player p : Bukkit.getOnlinePlayers()) {
-                    if (p.equals(player)) continue;
+                    Location loc = p.getLocation();
+
+                    p.playSound(
+                            loc,
+                            Sound.BLOCK_BEACON_ACTIVATE,
+                            0.9f,
+                            0.8f
+                    );
 
                     Bukkit.getScheduler().runTaskLater(
                             LevelBorderMain.getInstance(),
-                            () -> {
-                                if (!p.isOnline()) return;
-                                p.teleport(startLocation);
-                            },
+                            () -> p.playSound(
+                                    loc,
+                                    Sound.ENTITY_WARDEN_HEARTBEAT,
+                                    1.2f,
+                                    0.7f
+                            ),
                             10L
+                    );
+
+                    Bukkit.getScheduler().runTaskLater(
+                            LevelBorderMain.getInstance(),
+                            () -> p.playSound(
+                                    loc,
+                                    Sound.BLOCK_SCULK_SHRIEKER_SHRIEK,
+                                    0.4f,
+                                    0.6f
+                            ),
+                            18L
                     );
                 }
 
-                Bukkit.getScheduler().runTaskLater(
-                        LevelBorderMain.getInstance(),
-                        () -> {
-                            borderManager.setCenter(startLocation.clone());
-                            borderManager.setActive(true);
-
-                            for (Player online : Bukkit.getOnlinePlayers()) {
-                                borderManager.getData().savePlayerLevel(online);
-                            }
-
-                            scoreboardManager.show();
-
-                            for (Player p : Bukkit.getOnlinePlayers()) {
-                                Location loc = p.getLocation();
-
-                                p.playSound(
-                                        loc,
-                                        Sound.BLOCK_BEACON_ACTIVATE,
-                                        0.9f,
-                                        0.8f
-                                );
-
-                                Bukkit.getScheduler().runTaskLater(
-                                        LevelBorderMain.getInstance(),
-                                        () -> p.playSound(
-                                                p.getLocation(),
-                                                Sound.ENTITY_WARDEN_HEARTBEAT,
-                                                1.2f,
-                                                0.7f
-                                        ),
-                                        10L
-                                );
-
-                                Bukkit.getScheduler().runTaskLater(
-                                        LevelBorderMain.getInstance(),
-                                        () -> p.playSound(
-                                                p.getLocation(),
-                                                Sound.BLOCK_SCULK_SHRIEKER_SHRIEK,
-                                                0.4f,
-                                                0.6f
-                                        ),
-                                        18L
-                                );
-                            }
-
-                            success(player, "✅ Alle Spieler gesammelt. Border aktiviert!");
-                        },
-                        30L
-                );
-
-                success(player, "⏳ Spieler werden gesammelt...");
+                success(player, "✅ Border aktiviert!");
             }
 
             case "stop" -> {
@@ -277,7 +247,7 @@ public class LevelBorderCommand implements CommandExecutor, TabCompleter {
         );
 
         player.sendMessage(
-                Component.text(" optionen / start / stop / set / reset / center", NamedTextColor.GRAY)
+                Component.text(" start / stop / set / reset / center", NamedTextColor.GRAY)
                         .append(Component.text(" → Admin", NamedTextColor.DARK_GRAY))
         );
 
@@ -333,12 +303,13 @@ public class LevelBorderCommand implements CommandExecutor, TabCompleter {
         List<String> list = new ArrayList<>();
 
         if (args.length == 1) {
-            list.addAll(Arrays.asList("info", "score", "optionen", "center", "start", "stop", "set", "reset"));
+            list.addAll(Arrays.asList("info", "score", "center", "start", "stop", "set", "reset"));
         } else if (args.length == 2 && args[0].equalsIgnoreCase("set")) {
             list.addAll(Arrays.asList("10", "25", "50", "100"));
         } else if (args.length == 2 && args[0].equalsIgnoreCase("score")) {
             list.addAll(Arrays.asList("hide", "reload", "reset"));
         }
+
         return list;
     }
 }
