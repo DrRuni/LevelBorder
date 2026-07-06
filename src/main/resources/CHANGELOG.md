@@ -28,3 +28,9 @@
 
 In Minecraft können Entities normalerweise nicht natürlich außerhalb der WorldBorder spawnen.  
 Da dies bei kleinen LevelBorder-Challenges das Mob-Spawning stark einschränken kann, fügt Version 1.1 ein eigenes Mob-Spawning-System hinzu, damit die Challenge spielbar bleibt und sich trotzdem möglichst nah am Vanilla-Verhalten orientiert.
+
+---
+
+## v1.1.1
+
+- Code bereinigt und API-Warnungen reduziert

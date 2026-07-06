@@ -103,6 +103,11 @@ public class LevelBorderCommand implements CommandExecutor, TabCompleter {
                 }
 
                 borderManager.setActive(true);
+
+                for (Player online : Bukkit.getOnlinePlayers()) {
+                    borderManager.getData().savePlayerLevel(online);
+                }
+
                 scoreboardManager.show();
 
                 for (Player p : Bukkit.getOnlinePlayers()) {

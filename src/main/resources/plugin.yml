@@ -1,6 +1,6 @@
 name: LevelBorder
 main: runi.myddns.levelborder.LevelBorderMain
-version: '1.1'
+version: '1.1.1'
 author: Runi
 api-version: 26.1.2
 
