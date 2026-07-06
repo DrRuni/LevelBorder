@@ -34,16 +34,26 @@ public class PlayerListener implements Listener {
     @EventHandler
     public void onJoin(PlayerJoinEvent event) {
         Player p = event.getPlayer();
+
+        borderManager.getData().savePlayerLevel(p);
         scoreboardManager.addPlayer(p);
 
         p.sendMessage(Component.empty());
         p.sendMessage(ColorUtil.borderColor("Run´s LevelBorder"));
         p.sendMessage(Component.empty());
+
         p.sendMessage(
                 Component.text("Starte mit ", NamedTextColor.GRAY)
                         .append(Component.text("/levelborder ", NamedTextColor.AQUA))
                         .append(Component.text("start", NamedTextColor.GOLD))
         );
+
+        p.sendMessage(
+                Component.text("Spieleinstellungen kannst du mit ", NamedTextColor.GRAY)
+                        .append(Component.text("/optionen", NamedTextColor.AQUA))
+                        .append(Component.text(" ändern.", NamedTextColor.GRAY))
+        );
+
         p.sendMessage(Component.empty());
     }
 

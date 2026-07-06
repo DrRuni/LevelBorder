@@ -5,7 +5,6 @@ import org.bukkit.block.Block;
 import org.bukkit.entity.*;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitTask;
-import org.bukkit.NamespacedKey;
 import org.bukkit.persistence.PersistentDataType;
 
 import net.kyori.adventure.text.Component;
