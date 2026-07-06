@@ -6,6 +6,10 @@ import org.bukkit.*;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitRunnable;
+import org.bukkit.OfflinePlayer;
+import org.bukkit.potion.PotionEffect;
+import java.io.File;
+
 import runi.myddns.levelborder.Utils.ConsoleColor;
 
 @SuppressWarnings("ClassCanBeRecord")
@@ -32,16 +36,34 @@ public class LevelBorderManager {
     }
 
     public void setCenter(Location loc) {
+        if (loc == null || loc.getWorld() == null) return;
+
         loc.setX(Math.floor(loc.getX()) + 0.5);
         loc.setZ(Math.floor(loc.getZ()) + 0.5);
 
         data.setCenter(loc);
 
         loc.getWorld().setSpawnLocation(loc);
+
+        if (data.isActive()) {
+            applyBorderToAllWorlds(data.getSize(), 0);
+        }
     }
 
     public void setSize(double level) {
         double diameter = (level * 2) + 1;
+        data.setSize(diameter);
+
+        if (data.isActive()) {
+            applyBorderToAllWorlds(diameter, 0);
+        }
+    }
+
+    public void setDiameter(double diameter) {
+        if (diameter < 1.0) {
+            diameter = 1.0;
+        }
+
         data.setSize(diameter);
 
         if (data.isActive()) {
@@ -65,7 +87,7 @@ public class LevelBorderManager {
         double newSize = data.getSize() + (diff * 2);
         data.setSize(newSize);
 
-        applyBorderToAllWorlds(newSize, 3);
+        applyBorderToAllWorlds(newSize, 60);
 
         Bukkit.broadcast(
                 Component.text("🌱 Neuer Levelrekord durch ", NamedTextColor.GREEN)
@@ -81,9 +103,64 @@ public class LevelBorderManager {
         plugin.getLogger().info(ConsoleColor.RED + "     🔄 LevelBorder-Reset wurde von " + initiator.getName() + " ausgeführt." + ConsoleColor.RESET);
 
         applyBorderToAllWorlds(1_000_000, 0);
-        data.setCenter(null);
-        data.setActive(false);
-        data.resetAllPlayerLevels();
+
+        resetOnlinePlayers();
+        resetOfflinePlayerData();
+
+        data.resetToDefaults();
+    }
+
+    private void resetOnlinePlayers() {
+        for (Player p : Bukkit.getOnlinePlayers()) {
+            p.setLevel(0);
+            p.setExp(0.0f);
+            p.setTotalExperience(0);
+
+            p.setHealth(20.0);
+            p.setFoodLevel(20);
+            p.setSaturation(20.0f);
+            p.setExhaustion(0.0f);
+
+            p.setFireTicks(0);
+            p.setFallDistance(0.0f);
+
+            for (PotionEffect effect : p.getActivePotionEffects()) {
+                p.removePotionEffect(effect.getType());
+            }
+
+            p.getInventory().clear();
+            p.getEnderChest().clear();
+
+            p.setArrowsInBody(0);
+            p.setRemainingAir(p.getMaximumAir());
+        }
+    }
+
+    private void resetOfflinePlayerData() {
+        World mainWorld = Bukkit.getWorlds().getFirst();
+        File playerDataFolder = new File(mainWorld.getWorldFolder(), "playerdata");
+
+        if (!playerDataFolder.exists() || !playerDataFolder.isDirectory()) {
+            plugin.getLogger().warning("❌ PlayerData-Ordner nicht gefunden: " + playerDataFolder.getPath());
+            return;
+        }
+
+        for (OfflinePlayer offlinePlayer : Bukkit.getOfflinePlayers()) {
+            if (offlinePlayer.isOnline()) {
+                continue;
+            }
+
+            File dataFile = new File(playerDataFolder, offlinePlayer.getUniqueId() + ".dat");
+            File oldDataFile = new File(playerDataFolder, offlinePlayer.getUniqueId() + ".dat_old");
+
+            if (dataFile.exists() && !dataFile.delete()) {
+                plugin.getLogger().warning("❌ Konnte PlayerData nicht löschen: " + dataFile.getName());
+            }
+
+            if (oldDataFile.exists() && !oldDataFile.delete()) {
+                plugin.getLogger().warning("❌ Konnte alte PlayerData nicht löschen: " + oldDataFile.getName());
+            }
+        }
     }
 
     private void applyBorderToWorld(World world, double size, long transitionSeconds) {

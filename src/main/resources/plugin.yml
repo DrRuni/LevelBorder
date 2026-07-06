@@ -1,8 +1,8 @@
 name: LevelBorder
 main: runi.myddns.levelborder.LevelBorderMain
-version: '1.1.1'
+version: '1.2'
 author: Runi
-api-version: 26.1.2
+api-version: 26.2
 
 commands:
   lbscore:
@@ -13,3 +13,8 @@ commands:
     description: Hauptbefehl für LevelBorder.
     usage: /levelborder <subcommand>
     aliases: [lb]
+
+  optionen:
+    description: Öffnet das LevelBorder Optionen-Menü
+    usage: /optionen
+    aliases: [ options ]

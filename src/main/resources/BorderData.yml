@@ -7,8 +7,12 @@ border:
   size: 3
   active: false
   max-total-level: 0
+
 scoreboard:
   visible: false
+
+options:
+  keep-inventory: true
 
 timer:
   seconds: 0

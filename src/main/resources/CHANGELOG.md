@@ -34,3 +34,21 @@ Da dies bei kleinen LevelBorder-Challenges das Mob-Spawning stark einschränken 
 ## v1.1.1
 
 - Code bereinigt und API-Warnungen reduziert
+
+---
+
+## v1.2
+
+- Paper-API auf Version 26.2-alpha aktualisiert
+- Portallogik deutlich verbessert
+- Reset- und Start-Ablauf verbessert
+- Scoreboard-Spielerliste korrigiert
+- Optionen-GUI hinzugefügt
+- Neuer Befehl /optionen hinzugefügt
+- /levelborder optionen als zusätzlicher Zugriff auf das Optionen-Menü hinzugefügt
+- Optionen-Menü auf OP-Spieler beschränkt
+- KeepInventory kann nun über das Optionen-Menü umgeschaltet werden
+- LevelBorder kann über das Optionen-Menü gestartet, gestoppt, zurückgesetzt und zentriert werden
+- Bordergröße kann im Optionen-Menü per Linksklick verkleinert und per Rechtsklick vergrößert werden
+- Border-Mitte wird nun direkt nach dem Setzen aktualisiert
+- Kleinere Codebereinigungen und API-Anpassungen
