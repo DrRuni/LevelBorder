@@ -1,17 +1,27 @@
-package runi.myddns.LevelBorder.Commands;
+package runi.myddns.levelborder.Commands;
 
-import org.bukkit.*;
-import org.bukkit.command.*;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
+import org.bukkit.Bukkit;
+import org.bukkit.Location;
+import org.bukkit.Sound;
+import org.bukkit.command.Command;
+import org.bukkit.command.CommandExecutor;
+import org.bukkit.command.CommandSender;
+import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
 import org.jspecify.annotations.NonNull;
-import runi.myddns.LevelBorder.LevelBorderMain;
-import runi.myddns.LevelBorder.Manager.BorderDataManager;
-import runi.myddns.LevelBorder.Manager.LevelBorderManager;
-import runi.myddns.LevelBorder.Manager.ScoreboardManager;
-import runi.myddns.LevelBorder.Manager.TimerManager;
+import runi.myddns.levelborder.LevelBorderMain;
+import runi.myddns.levelborder.Manager.BorderDataManager;
+import runi.myddns.levelborder.Manager.LevelBorderManager;
+import runi.myddns.levelborder.Manager.ScoreboardManager;
+import runi.myddns.levelborder.Manager.TimerManager;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Locale;
 
 public class LevelBorderCommand implements CommandExecutor, TabCompleter {
 
@@ -36,7 +46,7 @@ public class LevelBorderCommand implements CommandExecutor, TabCompleter {
     ) {
 
         if (!(sender instanceof Player player)) {
-            sender.sendMessage("Nur Spieler können diesen Befehl nutzen.");
+            sender.sendMessage(Component.text("Nur Spieler können diesen Befehl nutzen.", NamedTextColor.RED));
             return true;
         }
 
@@ -56,15 +66,16 @@ public class LevelBorderCommand implements CommandExecutor, TabCompleter {
             return true;
         }
 
-        switch (args[0].toLowerCase()) {
+        switch (args[0].toLowerCase(Locale.ROOT)) {
 
             case "info" -> sendDetailedInfo(player, data);
 
             case "center" -> {
                 if (!isAdmin) {
-                    player.sendMessage(ChatColor.RED + "❌ Nur der Admin darf die Border-Mitte setzen!");
+                    error(player, "❌ Nur der Admin darf die Border-Mitte setzen!");
                     return true;
                 }
+
                 Location loc = player.getLocation();
                 double x = Math.floor(loc.getX()) + 0.5;
                 double z = Math.floor(loc.getZ()) + 0.5;
@@ -78,12 +89,12 @@ public class LevelBorderCommand implements CommandExecutor, TabCompleter {
                 );
 
                 borderManager.setCenter(centered);
-                player.sendMessage(ChatColor.GREEN + "📍 Border-Mitte exakt auf Blockgrenze gesetzt!");
+                success(player, "📍 Border-Mitte exakt auf Blockgrenze gesetzt!");
             }
 
             case "start" -> {
                 if (!isAdmin) {
-                    player.sendMessage(ChatColor.RED + "❌ Nur der Admin darf den LevelBorder starten!");
+                    error(player, "❌ Nur der Admin darf den LevelBorder starten!");
                     return true;
                 }
 
@@ -127,17 +138,17 @@ public class LevelBorderCommand implements CommandExecutor, TabCompleter {
                     );
                 }
 
-                player.sendMessage(ChatColor.GREEN + "✅ Border aktiviert!");
-
+                success(player, "✅ Border aktiviert!");
             }
 
             case "stop" -> {
                 if (!isAdmin) {
-                    player.sendMessage(ChatColor.RED + "❌ Nur der Admin darf den LevelBorder stoppen!");
+                    error(player, "❌ Nur der Admin darf den LevelBorder stoppen!");
                     return true;
                 }
 
                 borderManager.setActive(false);
+                scoreboardManager.stopUpdater();
 
                 player.playSound(
                         player.getLocation(),
@@ -146,26 +157,31 @@ public class LevelBorderCommand implements CommandExecutor, TabCompleter {
                         1.2f
                 );
 
-                player.sendMessage(ChatColor.RED + "🛑 Border deaktiviert!");
+                error(player, "🛑 Border deaktiviert!");
             }
 
             case "set" -> {
                 if (!isAdmin) {
-                    player.sendMessage(ChatColor.RED + "❌ Nur der Admin darf die Bordergröße ändern!");
+                    error(player, "❌ Nur der Admin darf die Bordergröße ändern!");
                     return true;
                 }
 
                 if (args.length < 2) {
-                    player.sendMessage(ChatColor.RED + "⚠ Nutzung: /levelborder set <größe>");
+                    error(player, "⚠ Nutzung: /levelborder set <größe>");
                     return true;
                 }
 
                 try {
                     double size = Double.parseDouble(args[1]);
                     borderManager.setSize(size);
-                    player.sendMessage(ChatColor.YELLOW + "📏 Bordergröße gesetzt auf " + size + " Blöcke.");
+
+                    player.sendMessage(
+                            Component.text("📏 Bordergröße gesetzt auf ", NamedTextColor.YELLOW)
+                                    .append(Component.text(size, NamedTextColor.GOLD))
+                                    .append(Component.text(" Blöcke.", NamedTextColor.YELLOW))
+                    );
                 } catch (NumberFormatException e) {
-                    player.sendMessage(ChatColor.RED + "Bitte eine gültige Zahl eingeben!");
+                    error(player, "Bitte eine gültige Zahl eingeben!");
                 }
 
                 player.playSound(
@@ -174,12 +190,11 @@ public class LevelBorderCommand implements CommandExecutor, TabCompleter {
                         0.6f,
                         1.2f
                 );
-
             }
 
             case "reset" -> {
                 if (!isAdmin) {
-                    player.sendMessage(ChatColor.RED + "❌ Nur der Admin darf den LevelBorder zurücksetzen!");
+                    error(player, "❌ Nur der Admin darf den LevelBorder zurücksetzen!");
                     return true;
                 }
 
@@ -199,11 +214,10 @@ public class LevelBorderCommand implements CommandExecutor, TabCompleter {
                     );
                 }
 
-                player.sendMessage(ChatColor.GREEN + "♻ LevelBorder + Portale wurden zurückgesetzt.");
-
+                success(player, "♻ LevelBorder + Portale wurden zurückgesetzt.");
             }
 
-            default -> player.sendMessage(ChatColor.RED + "Unbekannter Unterbefehl. Nutze /levelborder für Hilfe.");
+            default -> error(player, "Unbekannter Unterbefehl. Nutze /levelborder für Hilfe.");
         }
 
         return true;
@@ -214,24 +228,63 @@ public class LevelBorderCommand implements CommandExecutor, TabCompleter {
     }
 
     private void sendStatus(Player player) {
-        player.sendMessage("\n" + ChatColor.GOLD + "============= LevelBorder Befehle ============");
-        player.sendMessage(ChatColor.GRAY + " info" + ChatColor.DARK_GRAY + " → Status anzeigen");
-        player.sendMessage(ChatColor.GRAY + " score" + ChatColor.DARK_GRAY + " → Scoreboard anzeigen");
-        player.sendMessage(ChatColor.GRAY + " start / stop / set / reset / center" +
-                ChatColor.DARK_GRAY + " → Admin");
-        player.sendMessage(ChatColor.GOLD + "============================================");
+        player.sendMessage(Component.empty());
+        player.sendMessage(Component.text("============= LevelBorder Befehle ============", NamedTextColor.GOLD));
+
+        player.sendMessage(
+                Component.text(" info", NamedTextColor.GRAY)
+                        .append(Component.text(" → Status anzeigen", NamedTextColor.DARK_GRAY))
+        );
+
+        player.sendMessage(
+                Component.text(" score", NamedTextColor.GRAY)
+                        .append(Component.text(" → Scoreboard anzeigen", NamedTextColor.DARK_GRAY))
+        );
+
+        player.sendMessage(
+                Component.text(" start / stop / set / reset / center", NamedTextColor.GRAY)
+                        .append(Component.text(" → Admin", NamedTextColor.DARK_GRAY))
+        );
+
+        player.sendMessage(Component.text("============================================", NamedTextColor.GOLD));
     }
 
     private void sendDetailedInfo(Player player, BorderDataManager data) {
         int total = Bukkit.getOnlinePlayers().stream().mapToInt(Player::getLevel).sum();
 
-        player.sendMessage(ChatColor.AQUA + "============= 📊 LevelBorder Info =============");
-        player.sendMessage(ChatColor.GRAY + "Aktuelle Gesamt-Level: " + ChatColor.YELLOW + total);
-        player.sendMessage(ChatColor.GRAY + "Bisheriger Rekord: " + ChatColor.GOLD + data.getMaxTotalLevel());
-        player.sendMessage(ChatColor.GRAY + "Border-Größe: " + ChatColor.GREEN + data.getSize());
-        player.sendMessage(ChatColor.GRAY + "Aktiv: " +
-                (data.isActive() ? ChatColor.GREEN + "Ja" : ChatColor.RED + "Nein"));
-        player.sendMessage(ChatColor.AQUA + "============================================");
+        player.sendMessage(Component.text("============= 📊 LevelBorder Info =============", NamedTextColor.AQUA));
+
+        player.sendMessage(
+                Component.text("Aktuelle Gesamt-Level: ", NamedTextColor.GRAY)
+                        .append(Component.text(total, NamedTextColor.YELLOW))
+        );
+
+        player.sendMessage(
+                Component.text("Bisheriger Rekord: ", NamedTextColor.GRAY)
+                        .append(Component.text(data.getMaxTotalLevel(), NamedTextColor.GOLD))
+        );
+
+        player.sendMessage(
+                Component.text("Border-Größe: ", NamedTextColor.GRAY)
+                        .append(Component.text(data.getSize(), NamedTextColor.GREEN))
+        );
+
+        player.sendMessage(
+                Component.text("Aktiv: ", NamedTextColor.GRAY)
+                        .append(data.isActive()
+                                ? Component.text("Ja", NamedTextColor.GREEN)
+                                : Component.text("Nein", NamedTextColor.RED))
+        );
+
+        player.sendMessage(Component.text("============================================", NamedTextColor.AQUA));
+    }
+
+    private void success(Player player, String message) {
+        player.sendMessage(Component.text(message, NamedTextColor.GREEN));
+    }
+
+    private void error(Player player, String message) {
+        player.sendMessage(Component.text(message, NamedTextColor.RED));
     }
 
     @Override

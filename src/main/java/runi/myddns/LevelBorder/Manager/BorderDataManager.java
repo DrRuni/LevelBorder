@@ -1,11 +1,11 @@
-package runi.myddns.LevelBorder.Manager;
+package runi.myddns.levelborder.Manager;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
-import runi.myddns.LevelBorder.LevelBorderMain;
+import runi.myddns.levelborder.LevelBorderMain;
 
 import java.io.File;
 import java.io.IOException;
@@ -98,11 +98,14 @@ public class BorderDataManager {
 
     public Map<String, Integer> getAllPlayerLevels() {
         Map<String, Integer> map = new LinkedHashMap<>();
-        if (dataCfg.isConfigurationSection("players")) {
-            for (String name : dataCfg.getConfigurationSection("players").getKeys(false)) {
-                map.put(name, dataCfg.getInt("players." + name + ".level", 0));
-            }
+
+        var playersSection = dataCfg.getConfigurationSection("players");
+        if (playersSection == null) return map;
+
+        for (String name : playersSection.getKeys(false)) {
+            map.put(name, playersSection.getInt(name + ".level", 0));
         }
+
         return map;
     }
 
@@ -117,10 +120,6 @@ public class BorderDataManager {
 
     public long getTimerSeconds() {
         return dataCfg.getLong("timer.seconds", 0);
-    }
-
-    public boolean isTimerPaused() {
-        return dataCfg.getBoolean("timer.paused", true);
     }
 
     public void setTimer(long seconds) {
@@ -139,14 +138,16 @@ public class BorderDataManager {
     public int getTotalLevelSum() {
         int total = 0;
 
-        if (dataCfg.isConfigurationSection("players")) {
-            for (String name : dataCfg.getConfigurationSection("players").getKeys(false)) {
-                total += dataCfg.getInt("players." + name + ".level", 0);
-            }
+        var playersSection = dataCfg.getConfigurationSection("players");
+        if (playersSection == null) return total;
+
+        for (String name : playersSection.getKeys(false)) {
+            total += playersSection.getInt(name + ".level", 0);
         }
 
         return total;
     }
+
 
     public void resetAllPlayerLevels() {
 

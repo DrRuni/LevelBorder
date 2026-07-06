@@ -1,47 +1,50 @@
-package runi.myddns.LevelBorder.Listeners;
+package runi.myddns.levelborder.Listeners;
 
-import org.bukkit.*;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
+import org.bukkit.Bukkit;
+import org.bukkit.Location;
+import org.bukkit.World;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.CreatureSpawnEvent;
-import org.bukkit.event.player.*;
+import org.bukkit.event.player.PlayerJoinEvent;
+import org.bukkit.event.player.PlayerLevelChangeEvent;
+import org.bukkit.event.player.PlayerRespawnEvent;
 import org.bukkit.plugin.java.JavaPlugin;
-import runi.myddns.LevelBorder.Manager.LevelBorderManager;
-import runi.myddns.LevelBorder.Manager.BorderDataManager;
-import runi.myddns.LevelBorder.Manager.ScoreboardManager;
-import runi.myddns.LevelBorder.Manager.TimerManager;
-import runi.myddns.LevelBorder.Utils.ColorUtil;
+import runi.myddns.levelborder.Manager.BorderDataManager;
+import runi.myddns.levelborder.Manager.LevelBorderManager;
+import runi.myddns.levelborder.Manager.ScoreboardManager;
+import runi.myddns.levelborder.Utils.ColorUtil;
 
+@SuppressWarnings("unused")
 public class PlayerListener implements Listener {
 
     private final JavaPlugin plugin;
     private final LevelBorderManager borderManager;
     private final ScoreboardManager scoreboardManager;
-    private final TimerManager timerManager;
 
-    public PlayerListener(JavaPlugin plugin, LevelBorderManager borderManager, ScoreboardManager scoreboardManager, TimerManager timerManager) {
+    public PlayerListener(JavaPlugin plugin, LevelBorderManager borderManager, ScoreboardManager scoreboardManager) {
         this.plugin = plugin;
         this.borderManager = borderManager;
         this.scoreboardManager = scoreboardManager;
-        this.timerManager = timerManager;
     }
-
 
     @EventHandler
     public void onJoin(PlayerJoinEvent event) {
         Player p = event.getPlayer();
         scoreboardManager.addPlayer(p);
 
-        p.sendMessage("");
+        p.sendMessage(Component.empty());
         p.sendMessage(ColorUtil.borderColor("Run´s LevelBorder"));
-        p.sendMessage("");
-        p.sendMessage(ChatColor.GRAY + "Starte mit " + ChatColor.AQUA + "/levelborder " + ChatColor.GOLD + "start");
-        p.sendMessage("");
-    }
-
-    @EventHandler
-    public void onQuit(PlayerQuitEvent event) {
+        p.sendMessage(Component.empty());
+        p.sendMessage(
+                Component.text("Starte mit ", NamedTextColor.GRAY)
+                        .append(Component.text("/levelborder ", NamedTextColor.AQUA))
+                        .append(Component.text("start", NamedTextColor.GOLD))
+        );
+        p.sendMessage(Component.empty());
     }
 
     @EventHandler
@@ -72,6 +75,8 @@ public class PlayerListener implements Listener {
         if (!event.isBedSpawn()) {
             Location center = data.getCenter();
             World world = center.getWorld();
+            if (world == null) return;
+
             int y = world.getHighestBlockYAt(center) + 1;
             event.setRespawnLocation(new Location(world, center.getX(), y, center.getZ()));
         }
@@ -79,17 +84,19 @@ public class PlayerListener implements Listener {
 
     @EventHandler
     public void onCreatureSpawn(CreatureSpawnEvent event) {
+        if (!plugin.getConfig().getBoolean("mob-spawning.debug.vanilla-spawns", false)) return;
+
         if (event.getSpawnReason() != CreatureSpawnEvent.SpawnReason.NATURAL) return;
 
         Location loc = event.getLocation();
 
         Bukkit.getConsoleSender().sendMessage(
-                ChatColor.DARK_RED + "[VanillaSpawn] "
+                Component.text("[VanillaSpawn] "
                         + event.getEntityType()
                         + " bei X:" + loc.getBlockX()
                         + " Y:" + loc.getBlockY()
                         + " Z:" + loc.getBlockZ()
-                        + " Welt:" + loc.getWorld().getName()
+                        + " Welt:" + loc.getWorld().getName(), NamedTextColor.DARK_RED)
         );
     }
 }

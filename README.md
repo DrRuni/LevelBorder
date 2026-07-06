@@ -23,6 +23,8 @@ This makes progression, exploration and survival directly connected to player XP
 - Admin controls for starting, stopping, resuming and resetting the challenge
 - Configurable border center
 - 1:1 Nether border handling
+- Custom mob spawning system for small WorldBorder challenges
+- Border-aware monster spawning outside the current challenge border
 - Paper-optimized implementation
 
 ---
@@ -37,9 +39,9 @@ This makes progression, exploration and survival directly connected to player XP
 
 ## ⚙️ Compatibility
 
-- Requires **Paper 1.21.10**
-- Tested with **Paper 1.21.10**
-- Requires **Java 21**
+- Requires **Paper 26.1.2**
+- Tested with **Paper 26.1.2**
+- Requires **Java 25**
 - Paper-based servers only
 - Not compatible with pure Spigot/Bukkit
 - Not compatible with Vanilla servers

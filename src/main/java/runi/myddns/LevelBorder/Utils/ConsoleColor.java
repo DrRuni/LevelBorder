@@ -1,5 +1,6 @@
-package runi.myddns.LevelBorder.Utils;
+package runi.myddns.levelborder.Utils;
 
+@SuppressWarnings("unused")
 public class ConsoleColor {
 
     // 🔁 Reset

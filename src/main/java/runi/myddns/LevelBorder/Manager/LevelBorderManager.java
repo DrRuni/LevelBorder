@@ -1,21 +1,22 @@
-package runi.myddns.LevelBorder.Manager;
+package runi.myddns.levelborder.Manager;
 
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.*;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitRunnable;
-import runi.myddns.LevelBorder.Utils.ConsoleColor;
+import runi.myddns.levelborder.Utils.ConsoleColor;
 
+@SuppressWarnings("ClassCanBeRecord")
 public class LevelBorderManager {
 
     private final JavaPlugin plugin;
     private final BorderDataManager data;
-    private final ScoreboardManager scoreboard;
 
-    public LevelBorderManager(JavaPlugin plugin, BorderDataManager data, ScoreboardManager scoreboard) {
+    public LevelBorderManager(JavaPlugin plugin, BorderDataManager data) {
         this.plugin = plugin;
         this.data = data;
-        this.scoreboard = scoreboard;
 
         new BukkitRunnable() {
             @Override
@@ -66,11 +67,13 @@ public class LevelBorderManager {
 
         applyBorderToAllWorlds(newSize, 3);
 
-        Bukkit.broadcastMessage(
-                ChatColor.GREEN + "🌱 Neuer Levelrekord: " +
-                        ChatColor.GOLD + data.getMaxTotalLevel() +
-                        ChatColor.GREEN + " → Border auf " +
-                        ChatColor.GOLD + ((int) newSize) + "m"
+        Bukkit.broadcast(
+                Component.text("🌱 Neuer Levelrekord durch ", NamedTextColor.GREEN)
+                        .append(Component.text(trigger.getName(), NamedTextColor.GOLD))
+                        .append(Component.text(": ", NamedTextColor.GREEN))
+                        .append(Component.text(data.getMaxTotalLevel(), NamedTextColor.GOLD))
+                        .append(Component.text(" → Border auf ", NamedTextColor.GREEN))
+                        .append(Component.text((int) newSize + "m", NamedTextColor.GOLD))
         );
     }
 
@@ -151,10 +154,6 @@ public class LevelBorderManager {
         double dz = Math.abs(loc.getZ() - center.getZ());
 
         return dx <= radius && dz <= radius;
-    }
-
-    public boolean isOutsideBorder(Location loc) {
-        return !isInsideBorder(loc);
     }
 
     public BorderDataManager getData() { return data; }

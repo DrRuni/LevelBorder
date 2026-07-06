@@ -1,13 +1,20 @@
-package runi.myddns.LevelBorder.Commands;
+package runi.myddns.levelborder.Commands;
 
-import org.bukkit.ChatColor;
-import org.bukkit.command.*;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
+import org.bukkit.command.Command;
+import org.bukkit.command.CommandExecutor;
+import org.bukkit.command.CommandSender;
+import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import runi.myddns.LevelBorder.Manager.ScoreboardManager;
+import runi.myddns.levelborder.Manager.ScoreboardManager;
 
-import java.util.*;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.Locale;
 
 public class ScoreboardCommand implements CommandExecutor, TabCompleter {
 
@@ -21,10 +28,10 @@ public class ScoreboardCommand implements CommandExecutor, TabCompleter {
     public boolean onCommand(@NotNull CommandSender sender,
                              @NotNull Command command,
                              @NotNull String label,
-                             @NotNull String[] args) {
+                             String @NotNull [] args) {
 
         if (!(sender instanceof Player player)) {
-            sender.sendMessage(ChatColor.RED + "Nur Spieler können diesen Befehl verwenden.");
+            sender.sendMessage(Component.text("Nur Spieler können diesen Befehl verwenden.", NamedTextColor.RED));
             return true;
         }
 
@@ -36,26 +43,27 @@ public class ScoreboardCommand implements CommandExecutor, TabCompleter {
             return true;
         }
 
-        switch (args[0].toLowerCase()) {
+        switch (args[0].toLowerCase(Locale.ROOT)) {
 
             case "hide" -> {
                 scoreboardManager.hide();
-                player.sendMessage(ChatColor.GRAY + "📉 Scoreboard ausgeblendet.");
+                player.sendMessage(Component.text("📉 Scoreboard ausgeblendet.", NamedTextColor.GRAY));
             }
 
             case "reload" -> {
                 scoreboardManager.show();
                 scoreboardManager.startUpdater();
-                player.sendMessage(ChatColor.GREEN + "📈 Scoreboard wieder eingeblendet.");
+                player.sendMessage(Component.text("📈 Scoreboard wieder eingeblendet.", NamedTextColor.GREEN));
             }
 
             case "reset" -> {
                 if (!isAdmin) {
-                    player.sendMessage(ChatColor.RED + "❌ Nur der Admin darf das Scoreboard zurücksetzen!");
+                    player.sendMessage(Component.text("❌ Nur der Admin darf das Scoreboard zurücksetzen!", NamedTextColor.RED));
                     return true;
                 }
+
                 scoreboardManager.reset();
-                player.sendMessage(ChatColor.GOLD + "♻ Scoreboard-Daten wurden zurückgesetzt.");
+                player.sendMessage(Component.text("♻ Scoreboard-Daten wurden zurückgesetzt.", NamedTextColor.GOLD));
             }
 
             default -> sendHelp(player);
@@ -65,12 +73,25 @@ public class ScoreboardCommand implements CommandExecutor, TabCompleter {
     }
 
     private void sendHelp(Player player) {
-        player.sendMessage("");
-        player.sendMessage(ChatColor.GOLD + "========== LevelBorder Scoreboard ==========");
-        player.sendMessage(ChatColor.GRAY + "/lbscore hide" + ChatColor.DARK_GRAY + " → Scoreboard ausblenden");
-        player.sendMessage(ChatColor.GRAY + "/lbscore reload" + ChatColor.DARK_GRAY + " → Scoreboard wieder anzeigen");
-        player.sendMessage(ChatColor.GRAY + "/lbscore reset" + ChatColor.DARK_GRAY + " → Admin");
-        player.sendMessage(ChatColor.GOLD + "===========================================");
+        player.sendMessage(Component.empty());
+        player.sendMessage(Component.text("========== LevelBorder Scoreboard ==========", NamedTextColor.GOLD));
+
+        player.sendMessage(
+                Component.text("/lbscore hide", NamedTextColor.GRAY)
+                        .append(Component.text(" → Scoreboard ausblenden", NamedTextColor.DARK_GRAY))
+        );
+
+        player.sendMessage(
+                Component.text("/lbscore reload", NamedTextColor.GRAY)
+                        .append(Component.text(" → Scoreboard wieder anzeigen", NamedTextColor.DARK_GRAY))
+        );
+
+        player.sendMessage(
+                Component.text("/lbscore reset", NamedTextColor.GRAY)
+                        .append(Component.text(" → Admin", NamedTextColor.DARK_GRAY))
+        );
+
+        player.sendMessage(Component.text("===========================================", NamedTextColor.GOLD));
     }
 
     private int getPlayerStufe(Player p) {
@@ -82,11 +103,12 @@ public class ScoreboardCommand implements CommandExecutor, TabCompleter {
     public List<String> onTabComplete(@NotNull CommandSender sender,
                                       @NotNull Command command,
                                       @NotNull String alias,
-                                      @NotNull String[] args) {
+                                      String @NotNull [] args) {
 
         if (args.length == 1) {
             return Arrays.asList("hide", "reload", "reset");
         }
+
         return Collections.emptyList();
     }
 }

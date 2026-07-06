@@ -1,10 +1,13 @@
-package runi.myddns.LevelBorder.Manager;
+package runi.myddns.levelborder.Manager;
 
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitRunnable;
-import runi.myddns.LevelBorder.Utils.ColorUtil;
+
+import net.kyori.adventure.text.Component;
+
+import runi.myddns.levelborder.Utils.ColorUtil;
 
 public class TimerManager {
 
@@ -53,7 +56,7 @@ public class TimerManager {
                     }
                 }
 
-                String animated = ColorUtil.borderColorScrolling(
+                Component animated = ColorUtil.borderColorScrolling(
                         formatTime(seconds),
                         gradientTick
                 );
@@ -69,7 +72,7 @@ public class TimerManager {
 
     private void clearActionBar() {
         for (Player p : Bukkit.getOnlinePlayers()) {
-            p.sendActionBar(" ");
+            p.sendActionBar(Component.empty());
         }
     }
 
@@ -81,10 +84,6 @@ public class TimerManager {
         seconds = 0;
         save();
         clearActionBar();
-    }
-
-    public long getSeconds() {
-        return seconds;
     }
 
     private String formatTime(long totalSeconds) {

@@ -1,11 +1,13 @@
-package runi.myddns.LevelBorder.Manager;
+package runi.myddns.levelborder.Manager;
 
-import org.bukkit.*;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
+import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scoreboard.*;
-import runi.myddns.LevelBorder.Utils.ColorUtil;
+import runi.myddns.levelborder.Utils.ColorUtil;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -34,17 +36,26 @@ public class ScoreboardManager {
         updaterTask = new BukkitRunnable() {
             @Override
             public void run() {
-                if (!data.isScoreboardVisible()) return;
+                if (data.isScoreboardVisible()) {
+                    titleTick += 0.25f;
 
-                titleTick += 0.25f;
-
-                for (Player p : Bukkit.getOnlinePlayers()) {
-                    updateBoard(p);
+                    for (Player p : Bukkit.getOnlinePlayers()) {
+                        updateBoard(p);
+                    }
                 }
             }
         };
 
         updaterTask.runTaskTimer(plugin, 0L, 4L);
+    }
+
+    public void stopUpdater() {
+        if (updaterTask != null) {
+            updaterTask.cancel();
+            updaterTask = null;
+        }
+
+        updaterRunning = false;
     }
 
     private void updateBoard(Player p) {
@@ -57,7 +68,7 @@ public class ScoreboardManager {
             return;
         }
 
-        obj.setDisplayName(
+        obj.displayName(
                 ColorUtil.borderColorScrolling("- LevelBorder -", titleTick)
         );
 
@@ -71,31 +82,42 @@ public class ScoreboardManager {
 
         AtomicInteger score = new AtomicInteger(0);
 
-        addLine(p, score.getAndIncrement(), ChatColor.AQUA + "🧍 Spieler:");
-        addLine(p, score.getAndIncrement(), " ");
+        addLine(p, score.getAndIncrement(), Component.text("🧍 Spieler:", NamedTextColor.AQUA));
+        addLine(p, score.getAndIncrement(), Component.text(" "));
 
         Map<String, Integer> allPlayers = new HashMap<>(data.getAllPlayerLevels());
 
         allPlayers.entrySet().stream()
                 .sorted(Map.Entry.comparingByKey(String.CASE_INSENSITIVE_ORDER))
                 .forEach(entry ->
-                        addLine(p, score.getAndIncrement(),
-                                ChatColor.GRAY + "   - " + ChatColor.GREEN + entry.getKey()
-                                        + ": " + ChatColor.GOLD + entry.getValue())
+                        addLine(
+                                p,
+                                score.getAndIncrement(),
+                                Component.text("   - ", NamedTextColor.GRAY)
+                                        .append(Component.text(entry.getKey(), NamedTextColor.GREEN))
+                                        .append(Component.text(": ", NamedTextColor.GRAY))
+                                        .append(Component.text(entry.getValue(), NamedTextColor.GOLD))
+                        )
                 );
 
-        addLine(p, score.getAndIncrement(), " ");
-        addLine(p, score.getAndIncrement(), ChatColor.AQUA + "🌐 Bordergröße:");
-        addLine(p, score.getAndIncrement(),
-                ChatColor.GRAY + "   - " + ChatColor.GOLD + (int) data.getSize() + " m");
+        addLine(p, score.getAndIncrement(), Component.text(" "));
+        addLine(p, score.getAndIncrement(), Component.text("🌐 Bordergröße:", NamedTextColor.AQUA));
+        addLine(
+                p,
+                score.getAndIncrement(),
+                Component.text("   - ", NamedTextColor.GRAY)
+                        .append(Component.text((int) data.getSize() + " m", NamedTextColor.GOLD))
+        );
     }
 
-    private void addLine(Player p, int lineNumber, String text) {
+    private void addLine(Player p, int lineNumber, Component text) {
 
         Scoreboard board = boards.get(p);
         Objective obj = objectives.get(p);
 
-        String entry = ChatColor.values()[lineNumber].toString();
+        if (board == null || obj == null) return;
+
+        String entry = "§" + Integer.toHexString(lineNumber);
 
         Team team = board.getTeam("line" + lineNumber);
         if (team == null) {
@@ -103,8 +125,8 @@ public class ScoreboardManager {
             team.addEntry(entry);
         }
 
-        team.setPrefix(text);
-        team.setSuffix("");
+        team.prefix(text);
+        team.suffix(Component.empty());
 
         obj.getScore(entry).setScore(0);
     }
@@ -112,8 +134,10 @@ public class ScoreboardManager {
     public void hide() {
         data.setScoreboardVisible(false);
 
+        Scoreboard emptyBoard = Bukkit.getScoreboardManager().getNewScoreboard();
+
         for (Player p : Bukkit.getOnlinePlayers()) {
-            p.setScoreboard(Bukkit.getScoreboardManager().getNewScoreboard());
+            p.setScoreboard(emptyBoard);
         }
     }
 
@@ -142,8 +166,11 @@ public class ScoreboardManager {
 
         Scoreboard board = Bukkit.getScoreboardManager().getNewScoreboard();
         Objective obj = board.registerNewObjective(
-                "lbinfo", "dummy", ChatColor.GOLD + "🌍 LevelBorder"
+                "lbinfo",
+                Criteria.DUMMY,
+                Component.text("🌍 LevelBorder", NamedTextColor.GOLD)
         );
+
         obj.setDisplaySlot(DisplaySlot.SIDEBAR);
 
         boards.put(p, board);

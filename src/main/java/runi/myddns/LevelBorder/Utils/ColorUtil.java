@@ -1,15 +1,16 @@
-package runi.myddns.LevelBorder.Utils;
+package runi.myddns.levelborder.Utils;
 
-import net.md_5.bungee.api.ChatColor;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.TextColor;
 
 public class ColorUtil {
 
-    public static String borderColor(String text) {
+    public static Component borderColor(String text) {
 
         int startR = 0x7F, startG = 0xD8, startB = 0xFF;
         int endR = 0x1E, endG = 0x3A, endB = 0x5A;
 
-        StringBuilder sb = new StringBuilder();
+        Component result = Component.empty();
         int len = Math.max(1, text.length() - 1);
 
         for (int i = 0; i < text.length(); i++) {
@@ -19,24 +20,28 @@ public class ColorUtil {
             int g = (int) (startG + (endG - startG) * t);
             int b = (int) (startB + (endB - startB) * t);
 
-            sb.append(ChatColor.of(
-                    String.format("#%02x%02x%02x", r, g, b)
-            )).append(text.charAt(i));
+            result = result.append(
+                    Component.text(
+                            String.valueOf(text.charAt(i)),
+                            TextColor.color(r, g, b)
+                    )
+            );
         }
-        return sb.toString();
+
+        return result;
     }
 
-    public static String borderColorScrolling(String text, float tick) {
+    public static Component borderColorScrolling(String text, float tick) {
 
         int startR = 0x7F, startG = 0xD8, startB = 0xFF;
         int endR = 0x1E, endG = 0x3A, endB = 0x5A;
 
-        StringBuilder sb = new StringBuilder();
+        Component result = Component.empty();
         int length = Math.max(1, text.length() - 1);
 
         for (int i = 0; i < text.length(); i++) {
 
-            float offset = (i / (float) length);
+            float offset = i / (float) length;
             float wave = offset * 1.8f + tick * 0.04f;
 
             float t = (float) (Math.sin(wave * Math.PI * 2) * 0.5f + 0.5f);
@@ -45,28 +50,14 @@ public class ColorUtil {
             int g = (int) (startG + (endG - startG) * t);
             int b = (int) (startB + (endB - startB) * t);
 
-            sb.append(ChatColor.of(
-                    String.format("#%02x%02x%02x", r, g, b)
-            )).append(text.charAt(i));
+            result = result.append(
+                    Component.text(
+                            String.valueOf(text.charAt(i)),
+                            TextColor.color(r, g, b)
+                    )
+            );
         }
 
-        return sb.append(ChatColor.RESET).toString();
-    }
-
-    public static String rainbowScrolling(String text, float tick) {
-        StringBuilder sb = new StringBuilder();
-
-        for (int i = 0; i < text.length(); i++) {
-            float wave = (i * 0.65f) + tick * 0.12f;
-
-            int r = (int) (Math.sin(wave + 0) * 127 + 128);
-            int g = (int) (Math.sin(wave + 2) * 127 + 128);
-            int b = (int) (Math.sin(wave + 4) * 127 + 128);
-
-            sb.append(net.md_5.bungee.api.ChatColor.of(
-                    String.format("#%02x%02x%02x", r, g, b)
-            )).append(text.charAt(i));
-        }
-        return sb.toString();
+        return result;
     }
 }

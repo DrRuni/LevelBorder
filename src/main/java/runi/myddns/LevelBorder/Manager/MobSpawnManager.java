@@ -1,17 +1,22 @@
-package runi.myddns.LevelBorder.Manager;
+package runi.myddns.levelborder.Manager;
 
 import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.entity.*;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitTask;
+import org.bukkit.NamespacedKey;
+import org.bukkit.persistence.PersistentDataType;
+
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
 
 import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
 
 public class MobSpawnManager {
 
-    private static final String META_KEY = "levelborder_mob";
+    private final NamespacedKey mobKey;
 
     private final JavaPlugin plugin;
     private final BorderDataManager data;
@@ -24,6 +29,7 @@ public class MobSpawnManager {
         this.plugin = plugin;
         this.data = data;
         this.borderManager = borderManager;
+        this.mobKey = new NamespacedKey(plugin, "levelborder_mob");
     }
 
     public void start() {
@@ -115,7 +121,7 @@ public class MobSpawnManager {
         }
 
         int perPlayerCap = plugin.getConfig().getInt("mob-spawning.caps.per-player", 8);
-        int nearMobs = countLevelBorderMobsNear(player.getLocation(), 96);
+        int nearMobs = countLevelBorderMobsNearPlayer(player.getLocation());
 
         if (nearMobs >= perPlayerCap) {
             debug("Abbruch Spieler " + player.getName() + ": Spieler-Cap erreicht. Nähe=" + nearMobs + "/" + perPlayerCap);
@@ -142,17 +148,17 @@ public class MobSpawnManager {
                     + ", blockLight=" + candidate.getBlock().getLightFromBlocks()
                     + ", skyLight=" + candidate.getBlock().getLightFromSky());
 
-            if (!isAllowedByBorderMode(candidate)) {
+            if (isBlockedByBorderMode(candidate)) {
                 debug("Kandidat " + (i + 1) + " abgelehnt: Border-Modus erlaubt diese Zone nicht.");
                 continue;
             }
 
-            if (!isFarEnoughFromAllPlayers(candidate)) {
+            if (isTooCloseToAnyPlayer(candidate)) {
                 debug("Kandidat " + (i + 1) + " abgelehnt: zu nah an einem Spieler.");
                 continue;
             }
 
-            if (!isNearEnoughToAnyPlayer(candidate)) {
+            if (isTooFarFromAllPlayers(candidate)) {
                 debug("Kandidat " + (i + 1) + " abgelehnt: zu weit von allen Spielern.");
                 continue;
             }
@@ -290,7 +296,7 @@ public class MobSpawnManager {
         return null;
     }
 
-    private boolean isAllowedByBorderMode(Location loc) {
+    private boolean isBlockedByBorderMode(Location loc) {
         double borderSize = data.getSize();
         double assistInsideUntil = plugin.getConfig().getDouble(
                 "mob-spawning.assist-inside-until-border-size",
@@ -299,14 +305,10 @@ public class MobSpawnManager {
 
         boolean inside = borderManager.isInsideBorder(loc);
 
-        if (borderSize >= assistInsideUntil && inside) {
-            return false;
-        }
-
-        return true;
+        return borderSize >= assistInsideUntil && inside;
     }
 
-    private boolean isFarEnoughFromAllPlayers(Location loc) {
+    private boolean isTooCloseToAnyPlayer(Location loc) {
         int minDistance = plugin.getConfig().getInt("mob-spawning.distance.min-to-player", 28);
         double minSquared = minDistance * minDistance;
 
@@ -314,14 +316,14 @@ public class MobSpawnManager {
             if (player.getGameMode() == GameMode.SPECTATOR) continue;
 
             if (player.getLocation().distanceSquared(loc) < minSquared) {
-                return false;
+                return true;
             }
         }
 
-        return true;
+        return false;
     }
 
-    private boolean isNearEnoughToAnyPlayer(Location loc) {
+    private boolean isTooFarFromAllPlayers(Location loc) {
         int maxDistance = plugin.getConfig().getInt("mob-spawning.distance.max-to-player", 96);
         double maxSquared = maxDistance * maxDistance;
 
@@ -329,11 +331,11 @@ public class MobSpawnManager {
             if (player.getGameMode() == GameMode.SPECTATOR) continue;
 
             if (player.getLocation().distanceSquared(loc) <= maxSquared) {
-                return true;
+                return false;
             }
         }
 
-        return false;
+        return true;
     }
 
     private boolean isChunkLoaded(Location loc) {
@@ -351,7 +353,7 @@ public class MobSpawnManager {
 
         for (Entity entity : loc.getWorld().getEntities()) {
             if (!(entity instanceof Monster)) continue;
-            if (!entity.hasMetadata(META_KEY)) continue;
+            if (!isLevelBorderMob(entity)) continue;
 
             Location eLoc = entity.getLocation();
             if ((eLoc.getBlockX() >> 4) == chunkX && (eLoc.getBlockZ() >> 4) == chunkZ) {
@@ -372,13 +374,13 @@ public class MobSpawnManager {
         addMobOption(options, "spider", EntityType.SPIDER);
         addMobOption(options, "creeper", EntityType.CREEPER);
 
-        if (hasHeight(loc, 3)) {
+        if (hasEndermanHeight(loc)) {
             addMobOption(options, "enderman", EntityType.ENDERMAN);
         }
 
         addMobOption(options, "witch", EntityType.WITCH);
 
-        options.removeIf(option -> !canSpawnTypeAt(option.type(), loc));
+        options.removeIf(option -> cannotSpawnTypeAt(option.type(), loc));
 
         if (options.isEmpty()) return null;
 
@@ -398,7 +400,7 @@ public class MobSpawnManager {
             }
         }
 
-        return options.get(0);
+        return options.getFirst();
     }
 
     private void addMobOption(List<MobOption> options, String pathName, EntityType type) {
@@ -414,55 +416,55 @@ public class MobSpawnManager {
         options.add(new MobOption(type, weight, maxPackSize));
     }
 
-    private boolean canSpawnTypeAt(EntityType type, Location loc) {
+    private boolean cannotSpawnTypeAt(EntityType type, Location loc) {
         World world = loc.getWorld();
-        if (world == null) return false;
+        if (world == null) return true;
 
         Block feet = loc.getBlock();
         Block head = world.getBlockAt(loc.getBlockX(), loc.getBlockY() + 1, loc.getBlockZ());
         Block floor = world.getBlockAt(loc.getBlockX(), loc.getBlockY() - 1, loc.getBlockZ());
 
-        if (feet.isLiquid() || head.isLiquid() || floor.isLiquid()) return false;
-        if (feet.getType() == Material.WATER || head.getType() == Material.WATER || floor.getType() == Material.WATER) return false;
+        if (feet.isLiquid() || head.isLiquid() || floor.isLiquid()) return true;
+        if (feet.getType() == Material.WATER || head.getType() == Material.WATER || floor.getType() == Material.WATER) return true;
 
-        if (feet.getLightFromBlocks() > 0) return false;
+        if (feet.getLightFromBlocks() > 0) return true;
 
         boolean hasSkyAccess = feet.getLightFromSky() > 0;
         boolean isDay = world.getTime() < 13000 || world.getTime() > 23000;
 
-        if (hasSkyAccess && isDay) return false;
+        if (hasSkyAccess && isDay) return true;
 
         return switch (type) {
-            case ZOMBIE, ZOMBIE_VILLAGER, SKELETON, CREEPER, WITCH -> canSpawnOneBlockMob(loc, 2);
-            case SPIDER -> canSpawnSpider(loc);
-            case ENDERMAN -> canSpawnOneBlockMob(loc, 3);
-            default -> false;
+            case ZOMBIE, ZOMBIE_VILLAGER, SKELETON, CREEPER, WITCH -> cannotSpawnOneBlockMob(loc, 2);
+            case SPIDER -> cannotSpawnSpider(loc);
+            case ENDERMAN -> cannotSpawnOneBlockMob(loc, 3);
+            default -> true;
         };
     }
 
-    private boolean canSpawnOneBlockMob(Location loc, int height) {
+    private boolean cannotSpawnOneBlockMob(Location loc, int height) {
         World world = loc.getWorld();
-        if (world == null) return false;
+        if (world == null) return true;
 
         int x = loc.getBlockX();
         int y = loc.getBlockY();
         int z = loc.getBlockZ();
 
         Block floor = world.getBlockAt(x, y - 1, z);
-        if (!floor.getType().isSolid()) return false;
+        if (!floor.getType().isSolid()) return true;
 
         for (int i = 0; i < height; i++) {
             if (!world.getBlockAt(x, y + i, z).isPassable()) {
-                return false;
+                return true;
             }
         }
 
-        return true;
+        return false;
     }
 
-    private boolean canSpawnSpider(Location loc) {
+    private boolean cannotSpawnSpider(Location loc) {
         World world = loc.getWorld();
-        if (world == null) return false;
+        if (world == null) return true;
 
         int baseX = loc.getBlockX();
         int y = loc.getBlockY();
@@ -474,16 +476,16 @@ public class MobSpawnManager {
                 Block feet = world.getBlockAt(baseX + dx, y, baseZ + dz);
                 Block head = world.getBlockAt(baseX + dx, y + 1, baseZ + dz);
 
-                if (!floor.getType().isSolid()) return false;
-                if (!feet.isPassable()) return false;
-                if (!head.isPassable()) return false;
+                if (!floor.getType().isSolid()) return true;
+                if (!feet.isPassable()) return true;
+                if (!head.isPassable()) return true;
             }
         }
 
-        return true;
+        return false;
     }
 
-    private boolean hasHeight(Location loc, int height) {
+    private boolean hasEndermanHeight(Location loc) {
         World world = loc.getWorld();
         if (world == null) return false;
 
@@ -491,7 +493,7 @@ public class MobSpawnManager {
         int y = loc.getBlockY();
         int z = loc.getBlockZ();
 
-        for (int i = 0; i < height; i++) {
+        for (int i = 0; i < 3; i++) {
             if (!world.getBlockAt(x, y + i, z).isPassable()) {
                 return false;
             }
@@ -531,22 +533,22 @@ public class MobSpawnManager {
                 continue;
             }
 
-            if (!isAllowedByBorderMode(loc)) {
+            if (isBlockedByBorderMode(loc)) {
                 debug("Pack " + type + ": Versuch " + (i + 1) + " abgelehnt: Border-Modus.");
                 continue;
             }
 
-            if (!isFarEnoughFromAllPlayers(loc)) {
+            if (isTooCloseToAnyPlayer(loc)) {
                 debug("Pack " + type + ": Versuch " + (i + 1) + " abgelehnt: zu nah an Spieler.");
                 continue;
             }
 
-            if (!isNearEnoughToAnyPlayer(loc)) {
+            if (isTooFarFromAllPlayers(loc)) {
                 debug("Pack " + type + ": Versuch " + (i + 1) + " abgelehnt: zu weit von Spieler.");
                 continue;
             }
 
-            if (!canSpawnTypeAt(type, loc)) {
+            if (cannotSpawnTypeAt(type, loc)) {
                 debug("Pack " + type + ": Versuch " + (i + 1) + " abgelehnt: Spawnregeln nicht erfüllt bei "
                         + locShort(loc)
                         + ", blockLight=" + loc.getBlock().getLightFromBlocks()
@@ -555,7 +557,7 @@ public class MobSpawnManager {
             }
 
             Entity entity = loc.getWorld().spawnEntity(loc, type);
-            entity.setMetadata(META_KEY, new org.bukkit.metadata.FixedMetadataValue(plugin, true));
+            entity.getPersistentDataContainer().set(mobKey, PersistentDataType.BYTE, (byte) 1);
 
             sendPluginSpawnDebug(type, loc);
 
@@ -575,7 +577,7 @@ public class MobSpawnManager {
 
         for (World world : Bukkit.getWorlds()) {
             for (Entity entity : world.getEntities()) {
-                if (entity instanceof Monster && entity.hasMetadata(META_KEY)) {
+                if (entity instanceof Monster && isLevelBorderMob(entity)) {
                     count++;
                 }
             }
@@ -584,13 +586,15 @@ public class MobSpawnManager {
         return count;
     }
 
-    private int countLevelBorderMobsNear(Location center, double radius) {
-        double radiusSquared = radius * radius;
+    private int countLevelBorderMobsNearPlayer(Location center) {
+        int maxDistance = plugin.getConfig().getInt("mob-spawning.distance.max-to-player", 96);
+        double radiusSquared = maxDistance * maxDistance;
+
         int count = 0;
 
         for (Entity entity : center.getWorld().getEntities()) {
             if (!(entity instanceof Monster)) continue;
-            if (!entity.hasMetadata(META_KEY)) continue;
+            if (!isLevelBorderMob(entity)) continue;
 
             if (entity.getLocation().distanceSquared(center) <= radiusSquared) {
                 count++;
@@ -614,16 +618,16 @@ public class MobSpawnManager {
 
         boolean inside = borderManager.isInsideBorder(loc);
 
-        ChatColor color = inside ? ChatColor.GREEN : ChatColor.LIGHT_PURPLE;
+        NamedTextColor color = inside ? NamedTextColor.GREEN : NamedTextColor.LIGHT_PURPLE;
         String zone = inside ? "INNEN" : "AUSSEN";
 
         Bukkit.getConsoleSender().sendMessage(
-                color + "[PluginSpawn/" + zone + "] "
+                Component.text("[PluginSpawn/" + zone + "] "
                         + type
                         + " bei X:" + loc.getBlockX()
                         + " Y:" + loc.getBlockY()
                         + " Z:" + loc.getBlockZ()
-                        + " Welt:" + loc.getWorld().getName()
+                        + " Welt:" + loc.getWorld().getName(), color)
         );
     }
 
@@ -704,5 +708,9 @@ public class MobSpawnManager {
     private void debug(String message) {
         if (!debugFailedAttempts()) return;
         plugin.getLogger().info("[MobSpawnDebug] " + message);
+    }
+
+    private boolean isLevelBorderMob(Entity entity) {
+        return entity.getPersistentDataContainer().has(mobKey, PersistentDataType.BYTE);
     }
 }

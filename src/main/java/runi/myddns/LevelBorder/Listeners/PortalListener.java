@@ -1,4 +1,4 @@
-package runi.myddns.LevelBorder.Listeners;
+package runi.myddns.levelborder.Listeners;
 
 import org.bukkit.*;
 import org.bukkit.block.Block;
@@ -12,14 +12,15 @@ import org.bukkit.event.player.PlayerPortalEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.player.PlayerTeleportEvent;
 import org.bukkit.event.world.PortalCreateEvent;
-import runi.myddns.LevelBorder.LevelBorderMain;
-import runi.myddns.LevelBorder.Manager.BorderDataManager;
-import runi.myddns.LevelBorder.Manager.PortalManager;
+import runi.myddns.levelborder.LevelBorderMain;
+import runi.myddns.levelborder.Manager.BorderDataManager;
+import runi.myddns.levelborder.Manager.PortalManager;
 
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
+@SuppressWarnings("unused")
 public class PortalListener implements Listener {
 
     private final LevelBorderMain plugin;
@@ -79,8 +80,7 @@ public class PortalListener implements Listener {
         // 🔥 NETHER → OVERWORLD
         else if (fromWorld.getEnvironment() == World.Environment.NETHER) {
 
-            World overworld = Bukkit.getWorlds().get(0);
-            if (overworld == null) return;
+            World overworld = Bukkit.getWorlds().getFirst();
 
             Location search = portalCenter.clone();
             search.setWorld(overworld);
@@ -121,7 +121,7 @@ public class PortalListener implements Listener {
         double min = center.getX() - radius;
         double max = center.getX() + radius;
 
-        return (int) Math.max(min, Math.min(max, value));
+        return (int) Math.clamp(value, min, max);
     }
 
     @EventHandler

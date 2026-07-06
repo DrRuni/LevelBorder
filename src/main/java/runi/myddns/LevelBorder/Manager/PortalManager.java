@@ -1,4 +1,4 @@
-package runi.myddns.LevelBorder.Manager;
+package runi.myddns.levelborder.Manager;
 
 import org.bukkit.*;
 import org.bukkit.block.Block;
@@ -20,7 +20,10 @@ public class PortalManager {
         this.plugin = plugin;
         this.data = data;
         this.portalDir = new File(plugin.getDataFolder(), "portals");
-        if (!portalDir.exists()) portalDir.mkdirs();
+
+        if (!portalDir.exists() && !portalDir.mkdirs()) {
+            plugin.getLogger().warning("❌ Portal-Ordner konnte nicht erstellt werden: " + portalDir.getPath());
+        }
     }
 
     public void loadAllPortals() {
@@ -81,7 +84,7 @@ public class PortalManager {
         );
 
         World w = center.getWorld();
-        List<Location> list = portalCache.computeIfAbsent(w, k -> new ArrayList<>());
+        List<Location> list = portalCache.computeIfAbsent(w, _ -> new ArrayList<>());
 
         for (Location l : list) {
             if (
@@ -109,7 +112,8 @@ public class PortalManager {
         try {
             cfg.save(file);
         } catch (IOException e) {
-            e.printStackTrace();
+            plugin.getLogger().warning("❌ Portal konnte nicht gespeichert werden: " + file.getPath());
+            plugin.getLogger().warning(e.getMessage());
         }
     }
 
@@ -195,12 +199,14 @@ public class PortalManager {
 
     private int clampToBorder(int value) {
         Location c = data.getCenter();
-        double r = data.getSize() / 2 - 5;
+        if (c == null) return value;
 
-        return (int) Math.max(
-                c.getX() - r,
-                Math.min(c.getX() + r, value)
-        );
+        double r = data.getSize() / 2.0 - 5;
+
+        double min = c.getX() - r;
+        double max = c.getX() + r;
+
+        return (int) Math.clamp(value, min, max);
     }
 
     public void removeNearestPortal(Location loc, double radius) {
@@ -339,7 +345,8 @@ public class PortalManager {
         try {
             cfg.save(file);
         } catch (IOException e) {
-            e.printStackTrace();
+            plugin.getLogger().warning("❌ Portal-Datei konnte nicht gespeichert werden: " + file.getPath());
+            plugin.getLogger().warning(e.getMessage());
         }
     }
 
@@ -348,10 +355,12 @@ public class PortalManager {
         portalCache.clear();
 
         if (portalDir.exists()) {
-            File[] files = portalDir.listFiles((dir, name) -> name.endsWith(".yml"));
+            File[] files = portalDir.listFiles((_, name) -> name.endsWith(".yml"));
             if (files != null) {
                 for (File file : files) {
-                    file.delete();
+                    if (!file.delete()) {
+                        plugin.getLogger().warning("❌ Portal-Datei konnte nicht gelöscht werden: " + file.getPath());
+                    }
                 }
             }
         }

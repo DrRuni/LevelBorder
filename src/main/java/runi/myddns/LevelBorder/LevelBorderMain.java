@@ -1,28 +1,28 @@
-package runi.myddns.LevelBorder;
-
-import net.md_5.bungee.api.ChatColor;
-import org.bukkit.Bukkit;
-import org.bukkit.plugin.java.JavaPlugin;
-import runi.myddns.LevelBorder.Commands.LevelBorderCommand;
-import runi.myddns.LevelBorder.Commands.ScoreboardCommand;
-import runi.myddns.LevelBorder.Listeners.PortalListener;
-import runi.myddns.LevelBorder.Listeners.PlayerListener;
-import runi.myddns.LevelBorder.Manager.*;
-import runi.myddns.LevelBorder.Utils.ConsoleColor;
+package runi.myddns.levelborder;
 
 import java.io.File;
+
+import org.bukkit.Bukkit;
+import org.bukkit.plugin.java.JavaPlugin;
+import org.bukkit.command.PluginCommand;
+
+import runi.myddns.levelborder.Commands.LevelBorderCommand;
+import runi.myddns.levelborder.Commands.ScoreboardCommand;
+import runi.myddns.levelborder.Listeners.PortalListener;
+import runi.myddns.levelborder.Listeners.PlayerListener;
+import runi.myddns.levelborder.Manager.*;
+import runi.myddns.levelborder.Utils.ConsoleColor;
 
 public class LevelBorderMain extends JavaPlugin {
 
     private static LevelBorderMain instance;
-    private BorderDataManager dataManager;
-    private LevelBorderManager borderManager;
-    private ScoreboardManager scoreboardManager;
-    private TimerManager timerManager;
+
     private PortalManager portalManager;
     private MobSpawnManager mobSpawnManager;
 
-    public static LevelBorderMain getInstance() { return instance; }
+    public static LevelBorderMain getInstance() {
+        return instance;
+    }
 
     @Override
     public void onLoad() {
@@ -43,16 +43,17 @@ public class LevelBorderMain extends JavaPlugin {
 
         saveDefaultConfig();
 
-        if (!getDataFolder().exists()) {
-            getDataFolder().mkdirs();
+        if (!getDataFolder().exists() && !getDataFolder().mkdirs()) {
+            getLogger().warning("❌ Plugin-Ordner konnte nicht erstellt werden: " + getDataFolder().getPath());
         }
 
         saveBorderDataFile();
 
-        dataManager = new BorderDataManager(this);
-        scoreboardManager = new ScoreboardManager(this, dataManager);
-        timerManager = new TimerManager(this, dataManager);
-        borderManager = new LevelBorderManager(this, dataManager, scoreboardManager);
+        BorderDataManager dataManager = new BorderDataManager(this);
+        ScoreboardManager scoreboardManager = new ScoreboardManager(this, dataManager);
+        TimerManager timerManager = new TimerManager(this, dataManager);
+        LevelBorderManager borderManager = new LevelBorderManager(this, dataManager);
+
         portalManager = new PortalManager(this, dataManager);
         mobSpawnManager = new MobSpawnManager(this, dataManager, borderManager);
         portalManager.loadAllPortals();
@@ -62,17 +63,29 @@ public class LevelBorderMain extends JavaPlugin {
                 this
         );
         getServer().getPluginManager().registerEvents(
-                new PlayerListener(this, borderManager, scoreboardManager, timerManager),
+                new PlayerListener(this, borderManager, scoreboardManager),
                 this
         );
 
         LevelBorderCommand command = new LevelBorderCommand(borderManager, scoreboardManager, timerManager);
-        getCommand("levelborder").setExecutor(command);
-        getCommand("levelborder").setTabCompleter(command);
+        PluginCommand levelBorderCommand = getCommand("levelborder");
+
+        if (levelBorderCommand != null) {
+            levelBorderCommand.setExecutor(command);
+            levelBorderCommand.setTabCompleter(command);
+        } else {
+            getLogger().severe("❌ Command 'levelborder' fehlt in der plugin.yml!");
+        }
 
         ScoreboardCommand scoreCmd = new ScoreboardCommand(scoreboardManager);
-        getCommand("lbscore").setExecutor(scoreCmd);
-        getCommand("lbscore").setTabCompleter(scoreCmd);
+        PluginCommand lbScoreCommand = getCommand("lbscore");
+
+        if (lbScoreCommand != null) {
+            lbScoreCommand.setExecutor(scoreCmd);
+            lbScoreCommand.setTabCompleter(scoreCmd);
+        } else {
+            getLogger().severe("❌ Command 'lbscore' fehlt in der plugin.yml!");
+        }
 
         scoreboardManager.startUpdater();
         mobSpawnManager.start();
@@ -93,7 +106,7 @@ public class LevelBorderMain extends JavaPlugin {
             mobSpawnManager.stop();
         }
 
-        getLogger().info(ChatColor.GOLD + "💾 LevelBorder beendet.");
+        getLogger().info(ConsoleColor.GOLD + "💾 LevelBorder beendet." + ConsoleColor.RESET);
     }
 
 
@@ -106,12 +119,7 @@ public class LevelBorderMain extends JavaPlugin {
         }
     }
 
-    public ScoreboardManager getScoreboardManager() { return scoreboardManager; }
-    public TimerManager getTimerManager() { return timerManager; }
-    public LevelBorderManager getBorderManager() { return borderManager; }
-    public BorderDataManager getDataManager() { return dataManager; }
     public PortalManager getPortalManager() {
         return portalManager;
     }
-    public MobSpawnManager getMobSpawnManager() { return mobSpawnManager; }
 }
