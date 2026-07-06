@@ -1,0 +1,15 @@
+border:
+  world: world
+  center:
+    x: 0
+    y: 0
+    z: 0
+  size: 3
+  active: false
+  max-total-level: 0
+scoreboard:
+  visible: false
+
+timer:
+  seconds: 0
+
