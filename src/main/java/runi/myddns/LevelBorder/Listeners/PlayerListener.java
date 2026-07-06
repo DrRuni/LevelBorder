@@ -34,8 +34,6 @@ public class PlayerListener implements Listener {
     @EventHandler
     public void onJoin(PlayerJoinEvent event) {
         Player p = event.getPlayer();
-
-        borderManager.getData().savePlayerLevel(p);
         scoreboardManager.addPlayer(p);
 
         p.sendMessage(Component.empty());

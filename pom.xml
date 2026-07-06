@@ -6,7 +6,7 @@
 
     <groupId>runi.myddns</groupId>
     <artifactId>LevelBorder</artifactId>
-    <version>1.1.1</version>
+    <version>1.1</version>
     <packaging>jar</packaging>
 
     <name>LevelBorder</name>
@@ -113,7 +113,7 @@
 
                                 <!-- 🧩 In Plugin-Ordner kopieren -->
                                 <copy file="${project.build.directory}/${project.build.finalName}.jar"
-                                      tofile="C:\Users\ronny\Desktop\Server 26.1.2\plugins\LevelBorder-v1.1.1.jar"
+                                      tofile="C:\Users\ronny\Desktop\Server 26.1.2\plugins\LevelBorder-v1.1.jar"
                                       overwrite="true"
                                       failonerror="false" />
                             </target>
@@ -142,7 +142,7 @@
         <dependency>
             <groupId>io.papermc.paper</groupId>
             <artifactId>paper-api</artifactId>
-            <version>26.1.2.build.72-stable</version>
+            <version>26.1.2.build.64-stable</version>
             <scope>provided</scope>
         </dependency>
     </dependencies>
